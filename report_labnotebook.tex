@@ -1,0 +1,666 @@
+%% PSW Dispersion Simulation — Lab Report (Notion Dark Style)
+%% Compiler: xelatex
+\documentclass[11pt, a4paper]{article}
+
+%% ── 한글 + 유니코드 ────────────────────────────────────────────────────────
+\usepackage{fontspec}
+\usepackage{kotex}
+
+%% ── 색상·레이아웃 ─────────────────────────────────────────────────────────
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{setspace}
+
+%% ── 수식 ─────────────────────────────────────────────────────────────────
+\usepackage{amsmath}
+
+%% ── 표 ───────────────────────────────────────────────────────────────────
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{array}
+\usepackage{tabularx}
+
+%% ── 코드 ─────────────────────────────────────────────────────────────────
+\usepackage{listings}
+
+%% ── 링크 ─────────────────────────────────────────────────────────────────
+\usepackage[hidelinks]{hyperref}
+
+%% ── 리스트 ───────────────────────────────────────────────────────────────
+\usepackage{enumitem}
+
+%% ── 다이어그램 ───────────────────────────────────────────────────────────
+\usepackage{tikz}
+\usetikzlibrary{shapes.geometric, arrows.meta, positioning, calc, fit}
+
+%% ── 박스·콜아웃 ──────────────────────────────────────────────────────────
+\usepackage[most, breakable]{tcolorbox}
+\tcbuselibrary{skins}
+
+%% ── 헤더/제목 스타일 ─────────────────────────────────────────────────────
+\usepackage{fancyhdr}
+\usepackage{titlesec}
+\usepackage{parskip}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  Notion 다크 팔레트
+%% ═══════════════════════════════════════════════════════════════════════
+\definecolor{nbg}{HTML}{191919}
+\definecolor{ntext}{HTML}{E9E9E7}
+\definecolor{nmuted}{HTML}{9B9A97}
+\definecolor{nh1}{HTML}{FFFFFF}
+\definecolor{ncallout}{HTML}{252525}
+\definecolor{nborder}{HTML}{424242}
+\definecolor{ncodebg}{HTML}{1E1E1E}
+\definecolor{ncodetext}{HTML}{D4D4D4}
+\definecolor{nkw}{HTML}{569CD6}
+\definecolor{ncmt}{HTML}{6A9955}
+\definecolor{nstr}{HTML}{CE9178}
+\definecolor{ntblhd}{HTML}{2A2A2A}
+\definecolor{ntblalt}{HTML}{1F1F1F}
+\definecolor{naccent}{HTML}{5B89C3}
+\definecolor{nlink}{HTML}{7EB3FF}
+\definecolor{nhr}{HTML}{3B3B3B}
+\definecolor{nyellow}{HTML}{E6A817}
+\definecolor{ngreen}{HTML}{60BE8A}
+\definecolor{nred}{HTML}{E06C75}
+\definecolor{npurple}{HTML}{C586C0}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  페이지 & 폰트
+%% ═══════════════════════════════════════════════════════════════════════
+\geometry{a4paper, top=2cm, bottom=2.5cm, left=2.8cm, right=2.8cm,
+          headheight=15pt, headsep=10pt}
+
+\pagecolor{nbg}
+\color{ntext}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+%% Windows 폰트 (XeLaTeX)
+\setmainfont{Malgun Gothic}[
+  BoldFont  = {Malgun Gothic Bold},
+  Scale     = 1.0
+]
+\setmonofont{Consolas}[Scale=0.88]
+\newfontfamily\emojifont{Segoe UI Emoji}[Scale=0.95]
+\newcommand{\emo}[1]{{\emojifont #1}}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  Hyperref
+%% ═══════════════════════════════════════════════════════════════════════
+\hypersetup{
+  colorlinks=true,
+  linkcolor=nlink, urlcolor=nlink, citecolor=nlink,
+}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  제목 스타일
+%% ═══════════════════════════════════════════════════════════════════════
+\titlespacing*{\section}      {0pt}{1.8em}{0.4em}
+\titlespacing*{\subsection}   {0pt}{1.1em}{0.25em}
+\titlespacing*{\subsubsection}{0pt}{0.7em}{0.15em}
+
+\titleformat{\section}[block]
+  {\color{nh1}\large\bfseries}
+  {}
+  {0em}
+  {}
+  [\vspace{0.1em}{\color{nhr}\hrule\vspace{0.2em}}]
+
+\titleformat{\subsection}[block]
+  {\color{ntext}\normalsize\bfseries}
+  {}
+  {0em}
+  {}
+
+\titleformat{\subsubsection}[block]
+  {\color{nmuted}\normalsize}
+  {}
+  {0em}
+  {}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  콜아웃 박스
+%% ═══════════════════════════════════════════════════════════════════════
+\newtcolorbox{callout}[1][📌]{%
+  enhanced, breakable,
+  colback=ncallout, colframe=naccent,
+  boxrule=0pt, leftrule=3pt,
+  arc=3pt, outer arc=3pt,
+  left=8pt, right=6pt, top=5pt, bottom=5pt,
+  fontupper=\small\color{ntext},
+  before upper={{\emojifont #1}\enspace},
+}
+\newtcolorbox{tip}[1][💡]{%
+  enhanced, breakable,
+  colback=ncallout, colframe=nyellow,
+  boxrule=0pt, leftrule=3pt,
+  arc=3pt,
+  left=8pt, right=6pt, top=5pt, bottom=5pt,
+  fontupper=\small\color{ntext},
+  before upper={{\emojifont #1}\enspace},
+}
+\newtcolorbox{warn}[1][⚠️]{%
+  enhanced, breakable,
+  colback=ncallout, colframe=nred,
+  boxrule=0pt, leftrule=3pt,
+  arc=3pt,
+  left=8pt, right=6pt, top=5pt, bottom=5pt,
+  fontupper=\small\color{ntext},
+  before upper={{\emojifont #1}\enspace},
+}
+\newtcolorbox{perf}[1][⚡]{%
+  enhanced, breakable,
+  colback=ncallout, colframe=ngreen,
+  boxrule=0pt, leftrule=3pt,
+  arc=3pt,
+  left=8pt, right=6pt, top=5pt, bottom=5pt,
+  fontupper=\small\color{ntext},
+  before upper={{\emojifont #1}\enspace},
+}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  코드 블록 (VS Code 다크 테마)
+%% ═══════════════════════════════════════════════════════════════════════
+\lstdefinestyle{nd}{%
+  backgroundcolor  = \color{ncodebg},
+  commentstyle     = \color{ncmt}\itshape,
+  keywordstyle     = \color{nkw}\bfseries,
+  numberstyle      = \tiny\color{nmuted},
+  stringstyle      = \color{nstr},
+  basicstyle       = \ttfamily\footnotesize\color{ncodetext},
+  breakatwhitespace= false,
+  breaklines       = true,
+  keepspaces       = true,
+  numbers          = left,
+  numbersep        = 8pt,
+  showspaces       = false,
+  showstringspaces = false,
+  tabsize          = 4,
+  language         = Matlab,
+  frame            = single,
+  rulecolor        = \color{nborder},
+  xleftmargin      = 1.5em,
+  framexleftmargin = 1.5em,
+  aboveskip        = 0.5em,
+  belowskip        = 0.3em,
+  morekeywords     = {parfor, parcluster, parpool, gpuArray, gpuDevice,
+                      gather, gcp, saveProfile, vertcat, sub2ind,
+                      fullfile, strrep, sprintf, fprintf, repmat, ceil},
+}
+\lstset{style=nd}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  표 스타일
+%% ═══════════════════════════════════════════════════════════════════════
+\arrayrulecolor{nborder}
+\renewcommand{\arraystretch}{1.35}
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+\newcolumntype{C}[1]{>{\centering\arraybackslash}p{#1}}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  헤더/푸터
+%% ═══════════════════════════════════════════════════════════════════════
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\color{nmuted} PSW Dispersion Simulation}
+\fancyhead[R]{\small\color{nmuted} 2026년 4월}
+\fancyfoot[C]{\color{nmuted}\small\thepage}
+\renewcommand{\headrulewidth}{0pt}
+
+%% ═══════════════════════════════════════════════════════════════════════
+%%  TikZ 플로우차트
+%% ═══════════════════════════════════════════════════════════════════════
+\tikzset{
+  fnode/.style={%
+    rectangle, rounded corners=4pt,
+    draw=nborder, fill=ncallout,
+    text=ntext,
+    minimum width=7cm, minimum height=0.68cm,
+    align=center, font=\small,
+    inner sep=5pt,
+  },
+  farrow/.style={-Stealth, color=nmuted, line width=1.2pt},
+}
+
+%% ════════════════════════════════════════════════════════════════════════
+\begin{document}
+%% ════════════════════════════════════════════════════════════════════════
+
+%% ── 제목 ──────────────────────────────────────────────────────────────
+\vspace*{-0.3em}
+\begin{center}
+  {\Huge\bfseries\color{nh1}%
+   \emo{🧲}\enspace PSW Dispersion Simulation}\\[0.5em]
+  {\large\color{nmuted} 병렬화 최적화 · 기술 참조 문서}\\[0.15em]
+  {\normalsize\color{nmuted} 2026년 4월 · i7-13700K / RTX 4060 Ti / DDR5 64 GB}
+\end{center}
+\vspace{0.5em}{\color{nhr}\hrule}\vspace{1em}
+
+%% ── 개요 콜아웃 ────────────────────────────────────────────────────────
+\begin{callout}[🧲]
+PSW(Polarized Spin-Wave) Dispersion Simulation 전체 문서 허브.
+\texttt{run\_all.m}을 기준으로 각 모듈별 설명으로 구성된다.
+이미지 처리(image processing) 관련 내용은 \textbf{PSW 이미지 처리 분석} 별도 문서로 분리되어 있다.
+\end{callout}
+
+\vspace{1.2em}
+
+%% ── 문서 구성 ─────────────────────────────────────────────────────────
+{\color{nh1}\large\bfseries 문서 구성}
+\vspace{0.5em}
+
+\begin{center}
+\begin{tabular}{>{\color{naccent}\small}l >{\small\color{ntext}}L{9.5cm}}
+\rowcolor{ntblhd}
+\multicolumn{1}{l}{\color{nmuted}\small 페이지} &
+\multicolumn{1}{l}{\color{nmuted}\small 내용} \\
+\hline
+1.\ 개요 및 설정 & 병렬 전략, Parallel Pool, 상수/파라미터 설정 \\
+\rowcolor{ntblalt}
+2.\ 시뮬레이션 핵심 로직 & linearly.mat 로드, 레이저 세기 계산, parfor sub-batch 루프 \\
+3.\ 후처리 및 결과 저장 & 결과 재조립, .mat 저장 \\
+\rowcolor{ntblalt}
+2-1.\ time\_integrate.m 분석 & Velocity Verlet 적분, GPU/CPU 경로, axay\_opt\_partial 호출 구조 \\
+\end{tabular}
+\end{center}
+
+\vspace{1.5em}
+
+%% ── 전체 실행 흐름 플로우차트 ─────────────────────────────────────────
+{\color{nh1}\large\bfseries 전체 실행 흐름}
+\vspace{0.8em}
+
+\begin{center}
+\begin{tikzpicture}[node distance=0.55cm]
+  \node[fnode] (A) {\texttt{run\_all.m} 시작};
+  \node[fnode, below=of A] (B) {Parallel Pool 설정 (8 workers)};
+  \node[fnode, below=of B] (C) {STN\_constants + linearly.mat 로드};
+  \node[fnode, below=of C] (D) {레이저 세기 $I_1$, $I_2$ 계산};
+  \node[fnode, below=of D] (E) {parfor: 80 태스크 병렬 실행};
+  \node[fnode, below=of E] (F) {\texttt{time\_integrate.m} — Velocity Verlet CPU 적분};
+  \node[fnode, below=of F] (G) {결과 재조립 \texttt{Cell\_velocity}};
+  \node[fnode, below=of G] (H) {\texttt{result\_*.mat} 저장};
+  \foreach \f/\t in {A/B, B/C, C/D, D/E, E/F, F/G, G/H}
+    \draw[farrow] (\f) -- (\t);
+\end{tikzpicture}
+\end{center}
+
+\newpage
+
+%% ════════════════════════════════════════════════════════════════════════
+\section{\emo{⚙️}\enspace 1. 개요 및 설정}
+
+\begin{callout}[📌]
+\texttt{run\_all.m}의 Section 0--3을 다룬다: Parallel Pool 설정, STN 상수 로드,
+레이저 세기 파라미터 계산.
+\end{callout}
+
+\subsection{Section 0 — Parallel Pool 설정}
+
+MATLAB local profile의 \texttt{MaxNumWorkers} 기본값은 물리 P-core 수(8)로 제한된다.
+\texttt{parcluster} API를 통해 직접 프로파일을 수정해야 원하는 worker 수를 사용할 수 있다.
+
+\begin{lstlisting}
+n_workers = 8;   % 실측 최적값
+
+p = gcp('nocreate');
+if ~isempty(p) && p.NumWorkers ~= n_workers
+    delete(p);  p = [];
+end
+if isempty(p)
+    cluster = parcluster('local');
+    if cluster.NumWorkers ~= n_workers
+        cluster.NumWorkers = n_workers;
+        saveProfile(cluster);   % 프로파일에 영구 저장
+    end
+    parpool(cluster, n_workers);
+    fprintf('Parallel pool 시작: %d workers\n', n_workers);
+end
+\end{lstlisting}
+
+\subsection{Section 1 — STN 상수 로드 및 MAX 오버라이드}
+
+\begin{lstlisting}
+load(fullfile(root_dir, 'STN_constants.mat'));
+MAX = 2000000;   % STN_constants의 MAX=20,000 -> 200,000 오버라이드
+\end{lstlisting}
+
+\begin{tip}[💡]
+\texttt{STN\_constants.mat}에는 \texttt{MAX=20000}이 저장되어 있으나
+시뮬레이션은 200,000 입자가 필요하므로 로드 직후 오버라이드한다.
+\end{tip}
+
+\subsection{Section 3 — 양자상태 파일 경로}
+
+\begin{lstlisting}
+jm_data_path = fullfile(root_dir, 'data', jm_data);
+if ~isfile(jm_data_path)
+    error('파일 없음: %s', jm_data_path);
+end
+\end{lstlisting}
+
+%% ════════════════════════════════════════════════════════════════════════
+\section{\emo{🔬}\enspace 2. 시뮬레이션 핵심 로직}
+
+\begin{callout}[📌]
+\texttt{run\_all.m}의 Section 4--6을 다룬다:
+linearly.mat 로드, 레이저 세기 계산, parfor sub-batch 루프.
+\end{callout}
+
+\subsection{Section 4 — linearly.mat 로드 및 2D reshape}
+
+\begin{lstlisting}
+load(fullfile(root_dir, 'linearly.mat'));
+[nj_lin, nm_lin, ~] = size(linearly);
+linearly_2d = reshape(linearly, nj_lin*nm_lin, []);
+% (nj*nm) x nI -- 모든 parfor worker에 broadcast
+clear linearly;
+\end{lstlisting}
+
+\begin{tip}[💡]
+\texttt{linearly.mat}는 $\langle\cos^2\theta\rangle$ 룩업 테이블이다.
+\texttt{reshape}으로 2D로 펼친 뒤 broadcast 변수로 사전 로드하면,
+각 worker가 매 task마다 파일을 다시 읽는 오버헤드를 없앤다.
+\end{tip}
+
+\subsection{Section 5 — 레이저 세기 사전 계산}
+
+\begin{lstlisting}
+max_I  = 2.0 / (pi * w0z * w0y) * sqrt(4.0 * log(2) / (pi * tau^2));
+max_I  = max_I * atten1 * atten2 * 1e-3;
+I1_val  = max_I * I1_list;       % 스칼라
+I2_vals = max_I * I2_list(:);    % n_groups x 1
+\end{lstlisting}
+
+\subsection{Section 6 — parfor Sub-Batch 병렬 루프}
+
+\subsubsection{Sub-batch 분해 전략}
+
+\[
+  \underbrace{200{,}000}_{\text{MAX/조건}} \times \underbrace{8}_{\text{n\_groups}}
+  \;\longrightarrow\;
+  \underbrace{20{,}000}_{\text{batch\_size}} \times \underbrace{80}_{\text{n\_tasks}}
+\]
+
+각 태스크 번호 \texttt{task} $\in [1,\,80]$에서 조건 인덱스 매핑:
+\[
+  g = \left\lceil \frac{\texttt{task}}{n_\text{sub}} \right\rceil
+\]
+
+\begin{lstlisting}
+batch_size = 20000;
+n_sub      = ceil(MAX / batch_size);   % 10
+n_tasks    = n_groups * n_sub;          % 80
+results    = cell(n_tasks, 1);
+
+parfor task = 1:n_tasks
+    g_idx = ceil(task / n_sub);
+
+    [particle_t, laser_t] = init_particles(jm_data_path, batch_size, ...
+        x_position_fwhm, Dye_sigma, Dye_tau, ...
+        vx_caused_tilted, x_init_vel_sigma, y_init_vel_sigma, ...
+        z_init_vel_off, z_init_vel_sigma, Ij_distribution, Ips_z, Ips_y);
+
+    j_idx_t = particle_t(:,10) + 1;
+    m_idx_t = particle_t(:,11) + 1;
+    aligned_cost_t = linearly_2d(sub2ind([nj_lin,nm_lin], j_idx_t,m_idx_t), :);
+
+    I1_t = repmat(I1_val,         batch_size, 1);
+    I2_t = repmat(I2_vals(g_idx), batch_size, 1);
+
+    results{task} = time_integrate( ...
+        particle_t(:,1:3), particle_t(:,4:6), ...
+        laser_t(:,3), laser_t(:,4:5), ...
+        I1_t, I2_t, aligned_cost_t, zeros(batch_size,2), ...
+        lambda, w0z, w0y, tau, batch_size, tstep, t_ini, tend, false);
+end
+\end{lstlisting}
+
+%% ════════════════════════════════════════════════════════════════════════
+\section{\emo{📊}\enspace 3. 후처리 및 결과 저장}
+
+\begin{callout}[📌]
+\texttt{run\_all.m}의 후처리 부분(Section 7, 9)을 다룬다.
+sub-batch 결과 재조립 → 결과 저장 순서로 진행된다.
+이미지 처리(Section 8)는 \textbf{PSW 이미지 처리 분석} 문서로 분리됨.
+\end{callout}
+
+\subsection{Section 7 — Sub-batch 결과 재조립}
+
+80개 태스크의 결과를 조건($I_2$ 세기)별로 합쳐 \texttt{Cell\_velocity}에 저장한다.
+
+\begin{lstlisting}
+Cell_velocity = cell(n_groups, 1);
+for g = 1:n_groups
+    task_idx = (g-1)*n_sub + (1:n_sub);
+    Cell_velocity{g} = vertcat(results{task_idx});  % MAX x 3
+end
+\end{lstlisting}
+
+\begin{tip}[💡]
+\texttt{vertcat(results\{task\_idx\})}는 셀 배열 슬라이싱과 수직 결합을 한 번에 처리한다.
+각 cell은 $\texttt{batch\_size}\times 3$ 행렬이므로 결합 후 $\texttt{MAX}\times 3$ 행렬이 된다.
+\end{tip}
+
+\subsection{Section 9 — 결과 저장}
+
+결과 파일명은 \texttt{jm\_data} 파일명 기반으로 자동 생성된다.
+저장 전에 \texttt{constants} 구조체를 먼저 구성한다.
+
+\subsubsection{constants 구조체 구성}
+
+\begin{lstlisting}
+% 시뮬레이션 제어
+constants.n_workers     = n_workers;
+constants.MAX           = MAX;
+constants.batch_size    = batch_size;
+% 이미지 처리 파라미터 (-> PSW 이미지 처리 분석 문서 참조)
+constants.rep_std       = rep_std;
+constants.rep_vel       = rep_vel;
+constants.vel_pix       = vel_pix;
+constants.atten_factorx = atten_factorx;
+constants.atten_factory = atten_factory;
+% 분자빔 초기조건
+constants.jm_data           = jm_data;
+constants.x_position_fwhm   = x_position_fwhm;
+constants.Dye_sigma          = Dye_sigma;
+constants.Dye_tau            = Dye_tau;
+constants.vx_caused_tilted   = vx_caused_tilted;
+constants.x_init_vel_sigma   = x_init_vel_sigma;
+constants.y_init_vel_sigma   = y_init_vel_sigma;
+constants.z_init_vel_off     = z_init_vel_off;
+constants.z_init_vel_sigma   = z_init_vel_sigma;
+constants.Ij_distribution    = Ij_distribution;
+constants.Ips_z              = Ips_z;
+constants.Ips_y              = Ips_y;
+% 레이저 초기조건
+constants.lambda = lambda;
+constants.w0z    = w0z;
+constants.w0y    = w0y;
+constants.tau    = tau;
+constants.atten1 = atten1;
+constants.atten2 = atten2;
+constants.tstep  = tstep;
+constants.t_ini  = t_ini;
+constants.tend   = tend;
+\end{lstlisting}
+
+\subsubsection{저장 명령}
+
+\begin{lstlisting}
+out_file = fullfile(root_dir, ...
+    sprintf('result_%s.mat', strrep(jm_data, '.txt', '')));
+save(out_file, 'Cell_velocity', 'I1_list', 'I2_list', 'constants');
+fprintf('저장 완료: %s\n', out_file);
+\end{lstlisting}
+
+\subsubsection{저장 변수 목록}
+
+\vspace{0.3em}
+\begin{center}
+\begin{tabular}{>{\ttfamily\small\color{naccent}}l >{\small\color{ntext}}L{9cm}}
+\rowcolor{ntblhd}
+\multicolumn{1}{l}{\color{nmuted}\small 변수} &
+\multicolumn{1}{l}{\color{nmuted}\small 설명} \\
+\hline
+Cell\_velocity  & 조건별 최종 속도 데이터 (n\_groups$\times$1 cell, 각 MAX$\times$3) \\
+\rowcolor{ntblalt}
+I1\_list, I2\_list & 사용된 레이저 세기 목록 \\
+constants & 시뮬레이션 전체 파라미터 구조체 — 제어(n\_workers, MAX, batch\_size), 분자빔 초기조건, 레이저 초기조건, 이미지 처리 파라미터 포함 \\
+\end{tabular}
+\end{center}
+
+\subsection{성능 벤치마크}
+
+\vspace{0.3em}
+\begin{center}
+\begin{tabular}{>{\small}L{5.5cm} >{\small\centering}C{2.5cm} >{\small\centering\arraybackslash}C{2.5cm}}
+\rowcolor{ntblhd}
+\color{nmuted}\small 방식 &
+\color{nmuted}\small 소요 시간 &
+\color{nmuted}\small 배속 \\
+\hline
+순차 실행 & $\sim$960 s & 1$\times$ \\
+\rowcolor{ntblalt}
+\bfseries\color{ngreen} parfor 8 workers & \bfseries\color{ngreen} $\sim$181 s & \bfseries\color{ngreen} 5.3$\times$ \\
+parfor 12 workers & $\sim$183 s & 5.2$\times$ \\
+\rowcolor{ntblalt}
+parfor 16 workers & $\sim$187 s & 5.1$\times$ \\
+parfor 24 workers & $\sim$208 s & 4.6$\times$ \\
+\end{tabular}
+\end{center}
+\vspace{0.4em}
+
+\begin{perf}[⚡]
+8 workers가 최적값이다. Worker 수를 늘릴수록 \texttt{aligned\_cost} 배열(broadcast 변수)의
+동시 접근이 DDR5 메모리 버스를 포화시켜 오히려 성능이 저하된다.
+\end{perf}
+
+\newpage
+
+%% ════════════════════════════════════════════════════════════════════════
+\section{\emo{⚡}\enspace 2-1. time\_integrate.m 분석}
+
+\begin{callout}[📌]
+\texttt{time\_integrate.m}은 Velocity Verlet 시간 적분기로, GPU/CPU 두 경로를 모두 지원한다.
+\end{callout}
+
+\subsection{함수 시그니처}
+
+\begin{lstlisting}
+function velocity = time_integrate(position, velocity, Ij, Ips, ...
+        I1_vec, I2_vec, aligned_cost, last_data, ...
+        lambda, w0z, w0y, tau, MAX, tstep, t_ini, tend, use_gpu)
+% use_gpu:  true  -> GPU 사용 (단독 실행 시)
+%           false -> CPU 사용 (parfor worker 내 권장)
+%           생략  -> GPU 자동 감지
+\end{lstlisting}
+
+\subsection{CPU 경로 (parfor worker 내부)}
+
+\begin{lstlisting}
+t = t_ini;
+while t < tend
+    position = position + velocity .* tstep;
+    [~, last_data, a, ~] = axay_opt_partial( ...
+        position, t + Ij, I1_vec, I2_vec, ...
+        aligned_cost, last_data, Ips, lambda, w0z, w0y, tau, MAX);
+    velocity = velocity + a .* tstep;
+    t = t + tstep;
+end
+\end{lstlisting}
+
+\begin{tip}[💡]
+총 6,000 스텝 ($t_\text{ini}=-30\,\text{ns}$, $t_\text{end}=+30\,\text{ns}$, $\Delta t=10\,\text{ps}$).
+각 스텝에서 위치 업데이트 → 광학 힘 계산 → 속도 업데이트 순서로 진행된다.
+\end{tip}
+
+\subsection{GPU 경로 (단독 실행 시)}
+
+\begin{lstlisting}
+g_dev = gpuDevice;
+nI = size(aligned_cost, 2);
+bytes_per_particle = nI * 8 + 250;
+gpu_batch_size = floor(g_dev.AvailableMemory * 0.8 / bytes_per_particle);
+gpu_batch_size = min(gpu_batch_size, MAX);
+% VRAM 가용 메모리 기반 자동 청킹
+\end{lstlisting}
+
+\begin{warn}[⚠️]
+현재 parfor worker 내부에서는 \texttt{use\_gpu=false}로 CPU 모드 강제 사용.
+20,000 입자 규모에서는 GPU kernel launch overhead가 이득을 상쇄한다
+(실측: GPU 84~s vs CPU 64~s).
+\end{warn}
+
+%% ════════════════════════════════════════════════════════════════════════
+\section{\emo{🔧}\enspace 병렬화 전략 상세}
+
+\subsection{MaxNumWorkers 강제 확장}
+
+MATLAB local profile은 \texttt{MaxNumWorkers} 기본값이 8이다.
+단순히 \texttt{parpool(N)}만 호출하면 8개 이상 연결되지 않는다.
+
+\begin{lstlisting}
+cluster = parcluster('local');
+if cluster.NumWorkers ~= n_workers
+    cluster.NumWorkers = n_workers;
+    saveProfile(cluster);   % 프로파일에 영구 저장
+end
+parpool(cluster, n_workers);
+\end{lstlisting}
+
+\subsection{핵심 최적화 요약}
+
+\vspace{0.3em}
+\begin{center}
+\begin{tabular}{>{\small\bfseries\color{naccent}}L{4cm} >{\small\color{ntext}}L{9cm}}
+\rowcolor{ntblhd}
+\multicolumn{1}{l}{\color{nmuted}\small 최적화 항목} &
+\multicolumn{1}{l}{\color{nmuted}\small 내용} \\
+\hline
+aligned\_cost 벡터화 &
+  \texttt{for} 루프(MAX회) $\to$ \texttt{reshape}+\texttt{sub2ind} 단일 연산으로 대체 \\
+\rowcolor{ntblalt}
+gauss\_t 중복 제거 &
+  시간 루프 내 6회 중복 계산 $\exp(-4\ln 2\cdot t^2/\tau^2) \to$ 1회 사전 계산 \\
+broadcast 변수 &
+  \texttt{linearly\_2d}를 parfor 외부에서 한 번 로드, 모든 worker에 공유 \\
+\rowcolor{ntblalt}
+col\_idx 경계 처리 &
+  \texttt{min(I\_floor+1, n\_cols-1)}로 룩업 테이블 out-of-range 방어 \\
+GPU 호환 할당 &
+  \texttt{zeros(MAX,3,'like',position)} — CPU/GPU 경로 공통 코드 유지 \\
+\end{tabular}
+\end{center}
+
+\subsection{알려진 한계 및 개선 방안}
+
+\vspace{0.3em}
+\begin{center}
+\begin{tabular}{>{\small\color{nmuted}}L{3.5cm} >{\small\color{ntext}}L{9.5cm}}
+\rowcolor{ntblhd}
+\multicolumn{1}{l}{\color{nmuted}\small 항목} &
+\multicolumn{1}{l}{\color{nmuted}\small 내용} \\
+\hline
+RAM 사용률 & $\sim$85\% (64 GB 기준 $\sim$54 GB): batch\_size 증가 불가 \\
+\rowcolor{ntblalt}
+메모리 대역폭 & 8 workers가 포화점 → 추가 병렬화 불가 \\
+Single precision 전환 &
+  \texttt{linearly\_2d} + \texttt{aligned\_cost}를 \texttt{single}로 변환 시
+  메모리 85\% $\to$ 55\%, 속도 10--15\% 향상 예상 \\
+\rowcolor{ntblalt}
+GPU 재검토 & 입자 수 $>100{,}000$/batch 규모에서 재평가 가능 \\
+\end{tabular}
+\end{center}
+
+\vspace{1em}
+{\color{nhr}\hrule}
+\vspace{0.5em}
+{\small\color{nmuted}
+  이미지 처리(전자 반동 노이즈, 2D Voigt PSF, hist3 합성곱, 프로젝션)는
+  \textbf{PSW 이미지 처리 분석} 문서를 참조.
+}
+
+\end{document}

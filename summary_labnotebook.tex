@@ -1,0 +1,119 @@
+\documentclass[10pt, a4paper]{article}
+\usepackage{kotex}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{amsmath}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{titlesec}
+\usepackage{multicol}
+
+\geometry{top=1.4cm, bottom=1.4cm, left=1.6cm, right=1.6cm}
+
+\titleformat{\section}{\normalfont\bfseries\normalsize}{}{0em}{}[\vspace{-4pt}\rule{\linewidth}{0.4pt}]
+\titlespacing{\section}{0pt}{6pt}{3pt}
+\titleformat{\subsection}{\normalfont\bfseries\small}{}{0em}{}
+\titlespacing{\subsection}{0pt}{4pt}{1pt}
+
+\setlength{\parskip}{2pt}
+\setlength{\parindent}{0pt}
+
+\begin{document}
+
+\begin{center}
+  {\large\bfseries PSW Dispersion 시뮬레이션 병렬화 최적화 — 요약}\\[2pt]
+  {\small i7-13700K / RTX 4060 Ti / 64 GB RAM \quad|\quad 2026년 4월}
+\end{center}
+\vspace{2pt}
+
+\section{배경 및 목적}
+
+CS$_2$ 분자의 광학 트래핑 조건에서 PSW (Pendular State Wave) 분산을 계산하는
+MATLAB 시뮬레이션(\texttt{Main\_code.m})을 최적화하였다.
+레이저 세기 8개 조건($I_2 = 1.8$--$20.0$) 각각에 대해 200,000개 분자 앙상블을
+시뮬레이션해야 하며, 기존 순차 실행 시 총 약 \textbf{960초} 소요.
+
+\section{방법론: Sub-Batch Parfor 전략}
+
+\begin{multicols}{2}
+\textbf{작업 분해 구조}
+\[
+  200{,}000 \times 8 \;\longrightarrow\; \underbrace{20{,}000}_{\text{sub-batch}} \times 80_{\text{태스크}}
+\]
+
+각 태스크는 독립적으로 \texttt{init\_particles}~$\to$~\texttt{time\_integrate}
+파이프라인을 수행하며, \texttt{parfor}가 8개 worker에 분배.
+
+\columnbreak
+
+\begin{center}
+\small
+\begin{tabular}{ll}
+\toprule
+단계 & 처리 방식 \\
+\midrule
+입자 초기화 & parfor (80 tasks, 8 w) \\
+시간 적분 & CPU BLAS (Velocity Verlet) \\
+결과 재조립 & vertcat (순차) \\
+이미지 처리 & parfor (8 groups) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{multicols}
+
+\subsection{핵심 최적화 사항}
+
+\begin{itemize}[itemsep=1pt, topsep=1pt, leftmargin=1.2em]
+  \item \textbf{aligned\_cost 벡터화}: \texttt{for} 루프 $\to$ \texttt{reshape + sub2ind} 단일 연산
+  \item \textbf{gauss\_t 중복 계산 제거}: 시간 루프 내 6회 중복 $\to$ 1회 사전 계산
+  \item \textbf{MaxNumWorkers 확장}: \texttt{parcluster} API로 기본값(8 worker) 명시 최적화
+  \item \textbf{GPU 전략}: 20,000 입자 규모에서 CUDA kernel launch overhead가 이득을 상쇄
+        $\Rightarrow$ CPU parfor가 더 효율적
+\end{itemize}
+
+\section{성능 결과}
+
+\begin{multicols}{2}
+\begin{center}
+\small
+\begin{tabular}{rr}
+\toprule
+Workers 수 & 실행 시간 (s) \\
+\midrule
+8  & \textbf{181} \\
+12 & 183 \\
+16 & 187 \\
+24 & 208 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\columnbreak
+
+\begin{center}
+\small
+\begin{tabular}{lrr}
+\toprule
+방식 & 시간 (s) & 배율 \\
+\midrule
+기존 순차 실행 & $\sim$960 & 1$\times$ \\
+병렬화 최적화 & \textbf{181} & \textbf{5.3$\times$} \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{multicols}
+
+\smallskip
+Worker 수를 24 $\to$ 8로 줄이면 오히려 성능 향상.
+DDR5 메모리 대역폭 포화가 병목: 8 worker 초과 시 \texttt{aligned\_cost} 동시 접근이
+메모리 버스를 포화시켜 성능 저하.
+
+\section{향후 고려사항}
+
+\begin{itemize}[itemsep=1pt, topsep=1pt, leftmargin=1.2em]
+  \item \textbf{Single precision 전환}: 메모리 사용 85\% $\to$ 55\% 감소 예상, 개선폭 10--15\%로 현재 보류
+  \item \textbf{분자 수 확장}: MAX $>$ 500,000 시 batch\_size 및 worker 수 재조정 필요
+  \item \textbf{GPU 재검토}: 입자 수 $>$ 100,000/batch 규모에서 GPU 경로 유리할 가능성
+\end{itemize}
+
+\end{document}
