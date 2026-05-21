@@ -1,11 +1,19 @@
-% run_all.m — PSW Dispersion Simulation
+function run_all(override)
+% run_all(override) — PSW Dispersion Simulation
+%
+% override (선택): STN_constants.mat 기본값에서 바꿀 필드만 담은 struct
+%   예) run_all(struct('jm_data','alpha_T200.txt','MAX',1000000))
+%   인자 없이 run_all() 호출하면 기본값으로 실행
 %
 % 병렬 전략: parfor를 sub-batch 단위로 적용
 %   MAX=200,000 × 8조건 → sub-batch 20,000 × 80태스크
 %   8 workers (메모리 대역폭 포화점, 실측 최적)
 %   실측 시간: ~181초 (기존 순차 ~960초 대비 5.3배 빠름)
 
-clear; clc;
+if nargin < 1 || isempty(override)
+    override = struct();
+end
+
 tic
 
 root_dir = fileparts(mfilename('fullpath'));
@@ -31,9 +39,30 @@ if isempty(p)
     fprintf('Parallel pool 시작: %d workers\n', n_workers);
 end
 
+% 워커당 스레드 수 설정: 8 workers × 3 threads = 24 코어 활용
+spmd
+    maxNumCompThreads(3);
+end
+
+
 %% ── 1. 상수 로드 ─────────────────────────────────────────────────────────────
-load(fullfile(root_dir, 'STN_constants.mat'));
-MAX = 2000000;   % 조건당 총 입자 수 (STN_constants의 값 overwrite)
+load(fullfile(root_dir, 'STN_constants_fullpaper.mat'));
+MAX = 200000;   % 조건당 총 입자 수 (STN_constants의 값 overwrite)
+
+% override struct의 필드를 로컬 워크스페이스에 덮어쓰기
+% label은 출력 파일명용이므로 별도 추출 후 제외
+if isfield(override, 'label')
+    result_label = override.label;
+else
+    result_label = '';
+end
+override_fields = fieldnames(override);
+for fi = 1:numel(override_fields)
+    if ~strcmp(override_fields{fi}, 'label')
+        eval(sprintf('%s = override.(''%s'');', override_fields{fi}, override_fields{fi}));
+    end
+end
+clear override_fields fi
 
 %% ── 2. 이미지 처리 파라미터 ──────────────────────────────────────────────────
 rep_std       = 4.0;
@@ -58,54 +87,51 @@ clear linearly;
 %% ── 5. 레이저 세기 사전 계산 ─────────────────────────────────────────────────
 max_I   = 2.0 / (pi * w0z * w0y) * sqrt(4.0 * log(2) / (pi * tau^2));
 max_I   = max_I * atten1 * atten2 * 1e-3;
-I1_val  = max_I * I1_list;       % 스칼라
+
+if numel(I1_list) ~= numel(I2_list)
+    error('I1_list와 I2_list 크기가 다릅니다: I1=%d개, I2=%d개', numel(I1_list), numel(I2_list));
+end
+
+I1_vals = max_I * I1_list(:);   % n_groups×1
 I2_vals = max_I * I2_list(:);   % n_groups×1
 
 n_groups   = numel(I2_list);
-batch_size = 20000;                          % sub-batch당 입자 수 (GPU VRAM 또는 캐시 기준)
+batch_size = 100000;                          % sub-batch당 입자 수 (GPU VRAM 또는 캐시 기준)
 n_sub      = ceil(MAX / batch_size);         % 조건당 sub-batch 수 (예: 10)
 n_tasks    = n_groups * n_sub;               % 전체 parfor 태스크 수 (예: 80)
 
 fprintf('[2/2] Time integration 시작...\n');
 fprintf('      조건: %d × sub-batch: %d × 입자: %d = 총 태스크 %d\n', ...
     n_groups, n_sub, batch_size, n_tasks);
-fprintf('      24 logical core → ceil(%d/24)=%d 라운드 예상\n', ...
-    n_tasks, ceil(n_tasks/24));
+fprintf('      %d workers → ceil(%d/%d)=%d 라운드 예상\n', ...
+    n_workers, n_tasks, n_workers, ceil(n_tasks/n_workers));
 
 %% ── 6. parfor: sub-batch 단위 병렬 시뮬레이션 ───────────────────────────────
-% task 번호 → (조건 g, sub-batch s) 매핑:
-%   task = (g-1)*n_sub + s
-%   → g = ceil(task/n_sub),  s = mod(task-1, n_sub)+1
+% broadcast 파라미터를 struct로 패킹하여 헬퍼 함수에 전달
+P.x_position_fwhm  = x_position_fwhm;
+P.Dye_sigma         = Dye_sigma;
+P.Dye_tau           = Dye_tau;
+P.vx_caused_tilted  = vx_caused_tilted;
+P.x_init_vel_sigma  = x_init_vel_sigma;
+P.y_init_vel_sigma  = y_init_vel_sigma;
+P.z_init_vel_off    = z_init_vel_off;
+P.z_init_vel_sigma  = z_init_vel_sigma;
+P.Ij_distribution   = Ij_distribution;
+P.Ips_z             = Ips_z;
+P.Ips_y             = Ips_y;
+P.lambda            = lambda;
+P.w0z               = w0z;
+P.w0y               = w0y;
+P.tau               = tau;
+P.tstep             = tstep;
+P.t_ini             = t_ini;
+P.tend              = tend;
 
 results = cell(n_tasks, 1);
 
 parfor task = 1:n_tasks
-
-    g_idx = ceil(task / n_sub);   % 어떤 I2 조건인지 알아내기. 결국 총 task에서 한 세기당의 몇 sub batch인지를 나누어 주면 몇번째 세기인지 알 수 있음.
-
-    %% 입자 초기화 (sub-batch 크기만큼)
-    [particle_t, laser_t] = init_particles(jm_data_path, batch_size, ...
-        x_position_fwhm, Dye_sigma, Dye_tau, ...         %#ok<PFBNS>
-        vx_caused_tilted, x_init_vel_sigma, y_init_vel_sigma, ...
-        z_init_vel_off,   z_init_vel_sigma, ...
-        Ij_distribution,  Ips_z, Ips_y);
-
-    %% aligned_cost 벡터화 생성
-    j_idx_t = particle_t(:,10) + 1;
-    m_idx_t = particle_t(:,11) + 1;
-    aligned_cost_t = linearly_2d(sub2ind([nj_lin, nm_lin], j_idx_t, m_idx_t), :);
-
-    %% 레이저 세기 벡터
-    I1_t = repmat(I1_val,         batch_size, 1);
-    I2_t = repmat(I2_vals(g_idx), batch_size, 1);
-
-    %% CPU 시간 적분
-    results{task} = time_integrate( ...
-        particle_t(:,1:3), particle_t(:,4:6), ...
-        laser_t(:,3),      laser_t(:,4:5), ...
-        I1_t, I2_t, aligned_cost_t, zeros(batch_size, 2), ...
-        lambda, w0z, w0y, tau, batch_size, tstep, t_ini, tend, false);
-
+    results{task} = run_parfor_task(task, n_sub, batch_size, jm_data_path, ...
+        linearly_2d, nj_lin, nm_lin, I1_vals, I2_vals, P);
 end
 
 %% ── 7. sub-batch 결과를 조건별로 재조립 ────────────────────────────────────
@@ -155,8 +181,15 @@ constants.tstep  = tstep;
 constants.t_ini  = t_ini;
 constants.tend   = tend;
 
-out_file = fullfile(root_dir, sprintf('result_%s.mat', strrep(jm_data,'.txt','')));
+if ~isempty(result_label)
+    out_name = result_label;
+else
+    out_name = strrep(jm_data, '.txt', '');
+end
+out_file = fullfile(root_dir, 'result', sprintf('result_%s.mat', out_name));
 save(out_file, 'Cell_velocity', 'I1_list', 'I2_list', 'constants');
 fprintf('저장 완료: %s\n', out_file);
 
 fprintf('\n=== 완료 '); toc
+
+end
