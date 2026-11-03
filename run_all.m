@@ -46,8 +46,9 @@ end
 
 
 %% ── 1. 상수 로드 ─────────────────────────────────────────────────────────────
-load(fullfile(root_dir, 'STN_constants_fullpaper.mat'));
-MAX = 200000;   % 조건당 총 입자 수 (STN_constants의 값 overwrite)
+% load(fullfile(root_dir, 'STN_constants_fullpaper.mat'));
+load(fullfile(root_dir, 'STN_constants.mat'));
+MAX = 10000000;   % 조건당 총 입자 수 (STN_constants의 값 overwrite)
 
 % override struct의 필드를 로컬 워크스페이스에 덮어쓰기
 % label은 출력 파일명용이므로 별도 추출 후 제외
@@ -96,7 +97,7 @@ I1_vals = max_I * I1_list(:);   % n_groups×1
 I2_vals = max_I * I2_list(:);   % n_groups×1
 
 n_groups   = numel(I2_list);
-batch_size = 100000;                          % sub-batch당 입자 수 (GPU VRAM 또는 캐시 기준)
+batch_size = 5000;                          % sub-batch당 입자 수 (GPU VRAM 또는 캐시 기준)
 n_sub      = ceil(MAX / batch_size);         % 조건당 sub-batch 수 (예: 10)
 n_tasks    = n_groups * n_sub;               % 전체 parfor 태스크 수 (예: 80)
 
@@ -180,7 +181,7 @@ constants.atten2 = atten2;
 constants.tstep  = tstep;
 constants.t_ini  = t_ini;
 constants.tend   = tend;
-
+constants.max_I = max_I;
 if ~isempty(result_label)
     out_name = result_label;
 else
